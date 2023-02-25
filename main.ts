@@ -12,6 +12,11 @@ const CSS_DIR = path.join(DIST_DIR, "public", "css");
 main();
 
 async function main() {
+  console.info("%cStarting...", "color:blue");
+
+  console.info("%cEnsuring directories...", "color:blue");
+  await ensureDirs();
+
   console.info("%cCompiling HTML...", "color:blue");
   await handleIndex();
 
@@ -21,10 +26,19 @@ async function main() {
   console.info("%cDone!", "color:green");
 }
 
+async function ensureDirs() {
+  await Deno.mkdir(DIST_DIR, { recursive: true });
+
+  await Deno.mkdir(CSS_DIR, {
+    recursive: true,
+  });
+}
+
 async function handleIndex() {
+  let newText = text;
+
   for (const line of text.split("\n")) {
     if (line.includes("@include")) {
-
       const parsedLine = line.trim().split(" ").filter((item) => item !== "");
 
       const includeFilename = parsedLine[1] + ".html";
@@ -33,12 +47,11 @@ async function handleIndex() {
 
       const includeText = format(await Deno.readTextFile(includeFilename));
 
-      const newText = text.replace(line, includeText);
-
-      await Deno.mkdir(DIST_DIR, { recursive: true });
-      await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
+      newText = newText.replace(line, includeText);
     }
   }
+
+  await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
 }
 
 async function handleSass() {
@@ -48,10 +61,6 @@ async function handleSass() {
     style: "expanded",
     load_paths: ["assets/scss"]
   }).to_string() as string;
-
-  await Deno.mkdir(CSS_DIR, {
-    recursive: true,
-  });
 
   await Deno.writeTextFile(path.join(CSS_DIR, "main.css"), cssText);
 }
