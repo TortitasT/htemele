@@ -1,10 +1,8 @@
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as path from "https://deno.land/std@0.161.0/path/mod.ts";
 
-import sass from "https://deno.land/x/denosass/mod.ts";
+import sass from "https://deno.land/x/denosass@1.0.4/mod.ts";
 
 const filename = Deno.args[0] || "index.html";
-
-const text = await Deno.readTextFile(filename);
 
 const DIST_DIR = path.join(Deno.cwd(), "dist");
 const CSS_DIR = path.join(DIST_DIR, "public", "css");
@@ -27,32 +25,14 @@ async function main() {
 }
 
 async function ensureDirs() {
-  await Deno.mkdir(DIST_DIR, { recursive: true });
+  await Deno.mkdir(DIST_DIR, {
+    recursive: true
+  });
 
   await Deno.mkdir(CSS_DIR, {
     recursive: true,
   });
 }
-
-// async function handleIndex() {
-//   let newText = text;
-
-//   for (const line of text.split("\n")) {
-//     if (line.includes("@include")) {
-//       const parsedLine = line.trim().split(" ").filter((item) => item !== "");
-
-//       const includeFilename = parsedLine[1] + ".html";
-
-//       console.info("%cFound include: " + includeFilename, "color:blue");
-
-//       const includeText = format(await Deno.readTextFile(includeFilename));
-
-//       newText = newText.replace(line, includeText);
-//     }
-//   }
-
-//   await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
-// }
 
 async function handleInput(filename: string) {
   const text = await Deno.readTextFile(filename);
