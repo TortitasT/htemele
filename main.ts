@@ -18,7 +18,7 @@ async function main() {
   await ensureDirs();
 
   console.info("%cCompiling HTML...", "color:blue");
-  await handleIndex();
+  await handleInput(filename);
 
   console.info("%cCompiling SASS...", "color:blue");
   await handleSass();
@@ -34,7 +34,35 @@ async function ensureDirs() {
   });
 }
 
-async function handleIndex() {
+// async function handleIndex() {
+//   let newText = text;
+
+//   for (const line of text.split("\n")) {
+//     if (line.includes("@include")) {
+//       const parsedLine = line.trim().split(" ").filter((item) => item !== "");
+
+//       const includeFilename = parsedLine[1] + ".html";
+
+//       console.info("%cFound include: " + includeFilename, "color:blue");
+
+//       const includeText = format(await Deno.readTextFile(includeFilename));
+
+//       newText = newText.replace(line, includeText);
+//     }
+//   }
+
+//   await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
+// }
+
+async function handleInput(filename: string) {
+  const text = await Deno.readTextFile(filename);
+
+  const newText = await handleIncludes(text);
+
+  await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
+}
+
+async function handleIncludes(text: string): Promise<string> {
   let newText = text;
 
   for (const line of text.split("\n")) {
@@ -45,13 +73,15 @@ async function handleIndex() {
 
       console.info("%cFound include: " + includeFilename, "color:blue");
 
-      const includeText = format(await Deno.readTextFile(includeFilename));
+      const includeText = await Deno.readTextFile(includeFilename);
 
-      newText = newText.replace(line, includeText);
+      const handledIncludes = await handleIncludes(includeText);
+
+      newText = newText.replace(line, format(handledIncludes));
     }
   }
 
-  await Deno.writeTextFile(path.join(DIST_DIR, filename), newText);
+  return newText;
 }
 
 async function handleSass() {
