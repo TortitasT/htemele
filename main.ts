@@ -28,19 +28,19 @@ async function main() {
 }
 
 async function ensureDirs() {
+  await Deno.mkdir(path.join(Deno.cwd(), "assets", "scss"), {
+    recursive: true,
+  });
+
+  await Deno.mkdir(path.join(Deno.cwd(), "assets", "media"), {
+    recursive: true,
+  });
+
   await Deno.mkdir(DIST_DIR, {
     recursive: true
   });
 
-  await Deno.mkdir(path.join(DIST_DIR, "assets", "scss"), {
-    recursive: true,
-  });
-
   await Deno.mkdir(CSS_DIR, {
-    recursive: true,
-  });
-
-  await Deno.mkdir(path.join(DIST_DIR, "assets", "media"), {
     recursive: true,
   });
 
