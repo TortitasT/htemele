@@ -15,6 +15,9 @@ async function main() {
   console.info("%cEnsuring directories...", "color:blue");
   await ensureDirs();
 
+  console.info("%cCopying media...", "color:blue");
+  await handleMedia();
+
   console.info("%cCompiling HTML...", "color:blue");
   await handleInput(filename);
 
@@ -30,6 +33,10 @@ async function ensureDirs() {
   });
 
   await Deno.mkdir(CSS_DIR, {
+    recursive: true,
+  });
+
+  await Deno.mkdir(path.join(DIST_DIR, "public", "media"), {
     recursive: true,
   });
 }
@@ -73,6 +80,36 @@ async function handleSass() {
   }).to_string() as string;
 
   await Deno.writeTextFile(path.join(CSS_DIR, "main.css"), cssText);
+}
+
+async function handleMedia() {
+  const mediaDir = path.join(Deno.cwd(), "assets", "media");
+  const mediaFiles = await Deno.readDir(mediaDir);
+
+  for await (const file of mediaFiles) {
+    const src = path.join(mediaDir, file.name);
+    const dest = path.join(DIST_DIR, "public", "media", file.name);
+
+    await copyFileOrDir(src, dest);
+  }
+}
+
+function copyFileOrDir(src: string, dest: string) {
+  const srcInfo = Deno.statSync(src);
+  if (srcInfo.isDirectory) {
+    Deno.mkdir(dest, { recursive: true })
+
+    const files = Deno.readDirSync(src);
+
+    for (const file of files) {
+      const srcFile = path.join(src, file.name);
+      const destFile = path.join(dest, file.name);
+
+      copyFileOrDir(srcFile, destFile);
+    }
+  } else {
+    Deno.copyFile(src, dest);
+  }
 }
 
 
