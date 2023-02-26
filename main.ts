@@ -32,7 +32,15 @@ async function ensureDirs() {
     recursive: true
   });
 
+  await Deno.mkdir(path.join(DIST_DIR, "assets", "scss"), {
+    recursive: true,
+  });
+
   await Deno.mkdir(CSS_DIR, {
+    recursive: true,
+  });
+
+  await Deno.mkdir(path.join(DIST_DIR, "assets", "media"), {
     recursive: true,
   });
 
