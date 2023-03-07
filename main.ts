@@ -2,7 +2,10 @@ import * as path from "https://deno.land/std@0.161.0/path/mod.ts";
 
 import sass from "https://deno.land/x/denosass@1.0.4/mod.ts";
 
-const filename = Deno.args[0] || "index.html";
+import { serve } from "https://deno.land/std@0.178.0/http/mod.ts";
+
+let isDev = false;
+const filename = parseArgs(Deno.args);
 
 const DIST_DIR = path.join(Deno.cwd(), "dist");
 const CSS_DIR = path.join(DIST_DIR, "public", "css");
@@ -25,6 +28,10 @@ async function main() {
   await handleSass();
 
   console.info("%cDone!", "color:green");
+
+  if (isDev) {
+    await devServer();
+  }
 }
 
 async function ensureDirs() {
@@ -47,6 +54,19 @@ async function ensureDirs() {
   await Deno.mkdir(path.join(DIST_DIR, "public", "media"), {
     recursive: true,
   });
+}
+
+function parseArgs(args: string[]) {
+  if (args.length === 0) {
+    return "index.html";
+  }
+
+  if (args[0] == "dev") {
+    isDev = true;
+    return "index.html"
+  }
+
+  return args[0];
 }
 
 async function handleInput(filename: string) {
@@ -132,4 +152,52 @@ function format(text: string): string {
   newText = newText.replace("</head>", "");
 
   return newText;
+}
+
+async function devServer() {
+  watchFiles();
+
+  const handler = async (req: Request) => {
+    let path = DIST_DIR + new URL(req.url).pathname;
+
+    if (path.endsWith("/")) {
+      path += "index.html";
+    }
+
+    try {
+      await Deno.stat(path);
+    } catch (e) {
+      if (e instanceof Deno.errors.NotFound) {
+        return new Response(null, { status: 404 });
+      }
+
+      return new Response(null, { status: 500 });
+    }
+
+    const body = (await Deno.open(path)).readable;
+
+    return new Response(body);
+  };
+
+  serve(handler, { port: 3000 });
+}
+
+async function watchFiles() {
+  const watcher = Deno.watchFs(
+    Deno.cwd(),
+    { recursive: true }
+  );
+
+  for await (const event of watcher) {
+    if (event.paths[0].includes("dist")) {
+      continue;
+    }
+
+    console.info("%cFile change detected, recompiling...", "color:blue");
+
+    await handleInput(filename);
+    await handleSass();
+
+    console.info("%cDone!", "color:green");
+  }
 }
