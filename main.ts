@@ -5,6 +5,7 @@ import sass from "https://deno.land/x/denosass@1.0.4/mod.ts";
 import { serve } from "https://deno.land/std@0.178.0/http/mod.ts";
 
 let isDev = false;
+let refresh = false;
 const filename = parseArgs(Deno.args);
 
 const DIST_DIR = path.join(Deno.cwd(), "dist");
@@ -30,7 +31,7 @@ async function main() {
   console.info("%cDone!", "color:green");
 
   if (isDev) {
-    await devServer();
+    devServer();
   }
 }
 
@@ -154,11 +155,22 @@ function format(text: string): string {
   return newText;
 }
 
-async function devServer() {
+function devServer() {
   watchFiles();
 
   const handler = async (req: Request) => {
     let path = DIST_DIR + new URL(req.url).pathname;
+
+    if (path.endsWith("/refresh")) {
+
+      if (refresh) {
+        refresh = false;
+        return new Response(null, { status: 201 })
+      } else {
+        return new Response(null, { status: 200 });
+      }
+
+    }
 
     if (path.endsWith("/")) {
       path += "index.html";
@@ -174,9 +186,19 @@ async function devServer() {
       return new Response(null, { status: 500 });
     }
 
-    const body = (await Deno.open(path)).readable;
+    const body = await Deno.readTextFile(path);
 
-    return new Response(body);
+    const response = await addScriptTag(body);
+
+    return new Response(
+      response,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html"
+        }
+      }
+    );
   };
 
   serve(handler, { port: 3000 });
@@ -199,5 +221,31 @@ async function watchFiles() {
     await handleSass();
 
     console.info("%cDone!", "color:green");
+
+    refresh = true;
   }
+}
+
+async function addScriptTag(body: string) {
+  const script = `<script type="module">
+  setInterval(
+    () => {
+      const data = fetch("/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+  
+      data.then((res) => {
+        if (res.status === 201) {
+          location.reload();
+        }
+      });
+    },
+    1000
+  )
+  </script>`;
+
+  return body.replace("</body>", script + "</body>");
 }
