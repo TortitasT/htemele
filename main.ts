@@ -186,16 +186,22 @@ function devServer() {
       return new Response(null, { status: 500 });
     }
 
-    const body = await Deno.readTextFile(path);
+    let response: string | ReadableStream<Uint8Array> = "";
 
-    const response = await addScriptTag(body);
+    const mimetype = getMimeType(path);
+
+    if (mimetype === "text/html") {
+      response = addScriptTag(await Deno.readTextFile(path));
+    } else {
+      response = (await Deno.open(path)).readable
+    }
 
     return new Response(
       response,
       {
         status: 200,
         headers: {
-          "Content-Type": "text/html"
+          "Content-Type": mimetype
         }
       }
     );
@@ -226,7 +232,7 @@ async function watchFiles() {
   }
 }
 
-async function addScriptTag(body: string) {
+function addScriptTag(body: string) {
   const script = `<script type="module">
   setInterval(
     () => {
@@ -248,4 +254,38 @@ async function addScriptTag(body: string) {
   </script>`;
 
   return body.replace("</body>", script + "</body>");
+}
+
+function getMimeType(path: string): string {
+  const ext = path.split(".").pop();
+
+  if (ext === "html") {
+    return "text/html";
+  }
+
+  if (ext === "css") {
+    return "text/css";
+  }
+
+  if (ext === "js") {
+    return "text/javascript";
+  }
+
+  if (ext === "json") {
+    return "application/json";
+  }
+
+  if (ext === "png") {
+    return "image/png";
+  }
+
+  if (ext === "jpg") {
+    return "image/jpg";
+  }
+
+  if (ext === "svg") {
+    return "image/svg+xml";
+  }
+
+  return "text/plain";
 }
